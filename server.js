@@ -3,6 +3,7 @@
 
 // init project
 var express = require('express');
+const useragent = require("express-useragent")
 var app = express();
 
 // enable CORS (https://en.wikipedia.org/wiki/Cross-origin_resource_sharing)
@@ -20,12 +21,35 @@ app.get("/", function (req, res) {
 
 
 // your first API endpoint... 
-app.get("/api/hello", function (req, res) {
-  res.json({greeting: 'hello API'});
+app.get("/api/whoami", function (req, res) {
+    const payload = {};
+
+  // get the os
+  payload.software = useragent.parse(req.headers['user-agent']).source;
+
+  // get the language if any
+  const language = req.headers['accept-language'];
+  if (language) {
+    [payload.language] = language.split(',');
+  } else {
+    payload.language = null;
+  }
+
+  // find the IP adress
+  payload.ipaddress = req.headers['x-forwarded-for']
+    || req.connection.remoteAddress
+    || req.socket.remoteAddress
+    || req.connection.socket.remoteAddress;
+
+  // if x-forwarded-for supress the proxies
+  payload.ipaddress = payload.ipaddress.replace(/,.*$/, '');
+  return res.json(payload);
 });
 
 
-
+app.use(function (req, res, next) {
+  res.status(404).send("not found")
+})
 // listen for requests :)
 var listener = app.listen(process.env.PORT, function () {
   console.log('Your app is listening on port ' + listener.address().port);
